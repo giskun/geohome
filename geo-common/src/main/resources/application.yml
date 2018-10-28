@@ -1,0 +1,7 @@
+spring:
+  application:
+    name: geo-common
+  aop:
+    proxy-target-class: false
+server:
+  port: 7060

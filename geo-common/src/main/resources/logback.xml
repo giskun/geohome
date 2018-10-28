@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!-- For assistance related to logback-translator or configuration -->
+<!-- files in general, please contact the logback user mailing list -->
+<!-- at http://www.qos.ch/mailman/listinfo/logback-user -->
+<!-- -->
+<!-- For professional support please see -->
+<!-- http://www.qos.ch/shop/products/professionalSupport -->
+<!-- -->
+<configuration scan="true" scanPeriod="60 seconds" debug="false">
+	<property name="log.path" value="C:\\log\\geo-common.log" />
+	<appender name="stdout" class="ch.qos.logback.core.ConsoleAppender">
+		<encoder>
+			<pattern>%d{yyyy-MM-dd HH:mm:ss,GMT+8} [%t] [%c-%M:%L] [%p] - %m%n
+			</pattern>
+		</encoder>
+	</appender>
+	<appender name="ROOT"
+			  class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<!-- See also http://logback.qos.ch/manual/appenders.html#RollingFileAppender -->
+		<File>${log.path}</File>
+		<append>true</append>
+		<encoder>
+			<pattern>%d{yyyy-MM-dd HH:mm:ss,GMT+8} [%t] [%c-%M:%L] [%p] - %m%n
+			</pattern>
+		</encoder>
+		<rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+			<maxHistory>30</maxHistory>
+			<maxFileSize>50MB</maxFileSize>
+			<FileNamePattern>${log.path}.%d{yyyy-MM-dd}.%i.zip</FileNamePattern>
+		</rollingPolicy>
+	</appender>
+	<logger name="org.springframework" level="ERROR"/>
+	<logger name="com.apache.springfox" level="ERROR"/>
+	<logger name="com.apache.mybatis" level="DEBUG"/>
+	<logger name="java.sql.Connection" level="DEBUG"/>
+	<logger name="java.sql.Statement" level="DEBUG"/>
+	<logger name="java.sql.PreparedStatement" level="DEBUG"/>
+	<logger name="org.apache.http" level="ERROR"/>
+	<root level="DEBUG">
+		<appender-ref ref="stdout" />
+		<appender-ref ref="ROOT" />
+	</root>
+</configuration>
