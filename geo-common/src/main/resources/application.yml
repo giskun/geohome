@@ -1,7 +1,12 @@
 spring:
   application:
     name: geo-common
-  aop:
-    proxy-target-class: false
+
 server:
   port: 7060
+
+#需要注册中心时开放下面的配置，若不需要就注释掉
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://127.0.0.1:8761/eureka/

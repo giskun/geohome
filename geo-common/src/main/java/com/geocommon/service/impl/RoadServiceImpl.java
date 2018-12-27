@@ -1,19 +1,17 @@
 package com.geocommon.service.impl;
 
 import com.geocommon.index.STRtreeIndex;
-import com.geocommon.service.RoadService;
 
 import com.geocommon.util.GpsCoordUtil;
-import com.geocommon.vo.Roadline;
-import com.hdsx.measure.jts.MWKTReader;
+import com.geocommon.util.RoadUtil;
+import com.geocommonapi.service.RoadService;
+import com.geocommonapi.vo.Roadline;
 import com.hdsx.measure.jts.mgeom.*;
 import com.vividsolutions.jts.geom.*;
 
 import org.geotools.data.*;
 import org.geotools.data.shapefile.ShapefileDataStore;
 import org.geotools.data.shapefile.ShapefileDataStoreFactory;
-import org.geotools.data.shapefile.files.ShpFiles;
-import org.geotools.data.shapefile.shp.ShapefileReader;
 import org.geotools.feature.FeatureCollection;
 import org.geotools.feature.FeatureIterator;
 import org.geotools.feature.simple.SimpleFeatureTypeBuilder;
@@ -23,11 +21,12 @@ import org.opengis.feature.simple.SimpleFeatureType;
 import org.opengis.feature.type.AttributeDescriptor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.PostConstruct;
 import java.io.File;
 import java.io.Serializable;
-import java.math.BigDecimal;
 import java.nio.charset.Charset;
 import java.util.*;
 
@@ -37,18 +36,20 @@ import java.util.*;
  * @desc 路线服务
  */
 @Service
+@RestController
 public class RoadServiceImpl implements RoadService {
 
     @PostConstruct
     public void initRoad(){
-        Gcj02mectortowgs("D:\\zhangfk\\prj\\weather\\","luduan","luduanprj");
+        //Gcj02mectortowgs("D:\\zhangfk\\prj\\weather\\","luduan","luduanprj");
+        //wgs84togcj02("D:\\zhangfk\\prj\\road\\","ROAD_WGS84_M","ROAD02");
         //readRoad();
         //List<SimpleFeature> list = STRtreeIndex.query(STRtreeIndex.querygeometry);
         //System.out.println(list.size());
-        //LinearReference();
+        LinearReference();
     }
 
-    @Override
+    ///@Override
     public boolean readRoad() {
         String filepath = "D:\\zhangfk\\shape\\lwzx\\highway.shp";
         ShapefileDataStore shpDataStore = null;
@@ -69,9 +70,9 @@ public class RoadServiceImpl implements RoadService {
         return false;
     }
 
-    @Override
+    //@Override
     public boolean LinearReference() {
-        String filepath = "D:\\zhangfk\\shape\\jx\\TRAFFIC_NETWORK_WGS.shp";
+        String filepath = "D:\\zhangfk\\shape\\NM\\wgs\\GPSLW_M.shp";
         ShapefileDataStore shpDataStore = null;
         try {
             ShapefileDataStoreFactory dataStoreFactory = new ShapefileDataStoreFactory();
@@ -112,44 +113,15 @@ public class RoadServiceImpl implements RoadService {
                         case "lxlx":
                             item.setLxlx(Integer.parseInt(pro.getValue().toString()));
                             break;
-                        case "id":
+                        /*case "id":
                             item.setUuid(pro.getValue().toString());
-                            break;
+                            break;*/
                     }
                 }
                 if(geometry!=null){
-                    double length = geometry.getLength();
-                    MWKTReader mwktReader = new MWKTReader();
-                    double zhrange = Math.abs(item.getStartmile()-item.getEndmile());
-                    double factor = zhrange/length;
-                    if(item.getStartmile()>item.getEndmile())
-                        factor = factor*(-1);
-                    MultiMLineString lineString = null;
-                    String wkts = geometry.toString();
-                    int ll = wkts.indexOf("((");
-                    int end = wkts.indexOf("))");
-                    wkts = wkts.substring(ll+2,end);
-                    MGeometryFactory mGeometryFactory = new MGeometryFactory();
-                    if(wkts.indexOf("), (")<0){//单线
-                        MLineString mLineString= createMLineString(wkts,item.getStartmile(),factor);
-                        lineString=mGeometryFactory.createMultiMLineString(new MLineString[]{mLineString});
-                    }else{//双线
-                        String[] wktArr = wkts.split("\\), \\(");
-                        MLineString[] multiMLineString = new MLineString[wktArr.length];
-                        double startQdzh = item.getStartmile();
-                        for(int j=0;j<wktArr.length;j++){
-                            MLineString mLineString = createMLineString(wktArr[j],startQdzh,factor);
-                            multiMLineString[j] = mLineString;
-                            if(factor<0)
-                                startQdzh = mLineString.getMinM();
-                            else{
-                                startQdzh = mLineString.getMaxM();
-                            }
-                        }
-                        lineString=mGeometryFactory.createMultiMLineString(multiMLineString);
-                    }
-                    item.setShape(lineString);
+                    item.setShape(geometry);
                 }
+                RoadUtil.addRoadLine(item);
             }
         }catch(Exception e){
             e.printStackTrace();
@@ -161,13 +133,12 @@ public class RoadServiceImpl implements RoadService {
     }
 
 
-    @Override
+    //@Override
     public boolean Gcj02mectortowgs(String filePath, String fileName, String projectName) {
         String filepath = filePath+fileName+".shp";
         ShapefileDataStore shpDataStore = null;
         String shppath = filePath+projectName+".shp";
         try{
-
             File shapeFile = new File(filepath);
             ShapefileDataStoreFactory dataStoreFactory = new ShapefileDataStoreFactory();
             shpDataStore = (ShapefileDataStore)dataStoreFactory.createDataStore(new File(filepath).toURI().toURL());
@@ -178,7 +149,6 @@ public class RoadServiceImpl implements RoadService {
             FeatureSource<SimpleFeatureType, SimpleFeature> featureSource = (FeatureSource<SimpleFeatureType, SimpleFeature>) shpDataStore.getFeatureSource(typeName);
             FeatureCollection<SimpleFeatureType, SimpleFeature> result = featureSource.getFeatures();
             FeatureIterator<SimpleFeature> iterator = result.features();
-            //创建shape
             //创建shape文件对象
             File file = new File(shppath);
             Map<String, Serializable> paramss = new HashMap<String, Serializable>();
@@ -195,6 +165,7 @@ public class RoadServiceImpl implements RoadService {
             //没有空间信息
             List<String> geomnullist = new ArrayList<>();
             int i=0;
+            MGeometry mGeometry = null;
             GeometryFactory geometryFactory = new GeometryFactory();
             while(iterator.hasNext()) {
                 MultiLineString multilineString = null;
@@ -239,12 +210,109 @@ public class RoadServiceImpl implements RoadService {
             if (shpDataStore!=null)
                 shpDataStore.dispose();
         }
-        GeometryFactory geometryFactory = new GeometryFactory();
+        return false;
+    }
+
+    //@Override
+    public boolean wgs84togcj02(String filePath, String fileName, String projectName) {
+        String filepath = filePath+fileName+".shp";
+        ShapefileDataStore shpDataStore = null;
+        String shppath = filePath+projectName+".shp";
+        try{
+            File shapeFile = new File(filepath);
+            ShapefileDataStoreFactory dataStoreFactory = new ShapefileDataStoreFactory();
+            shpDataStore = (ShapefileDataStore)dataStoreFactory.createDataStore(new File(filepath).toURI().toURL());
+            shpDataStore.setCharset(Charset.forName("GBK"));
+            List<AttributeDescriptor> attrList = shpDataStore.getFeatureSource().getSchema()
+                    .getAttributeDescriptors();
+            String typeName = shpDataStore.getTypeNames()[0];
+            FeatureSource<SimpleFeatureType, SimpleFeature> featureSource = (FeatureSource<SimpleFeatureType, SimpleFeature>) shpDataStore.getFeatureSource(typeName);
+            FeatureCollection<SimpleFeatureType, SimpleFeature> result = featureSource.getFeatures();
+            FeatureIterator<SimpleFeature> iterator = result.features();
+            //创建shape文件对象
+            File file = new File(shppath);
+            Map<String, Serializable> paramss = new HashMap<String, Serializable>();
+            paramss.put(ShapefileDataStoreFactory.URLP.key, file.toURI().toURL());
+            ShapefileDataStore ds = (ShapefileDataStore) new ShapefileDataStoreFactory().createNewDataStore(paramss);
+            //定义图形信息和属性信息
+            SimpleFeatureTypeBuilder tb = new SimpleFeatureTypeBuilder();
+            tb.setName("shapefile");
+            tb.addAll(attrList);
+            ds.createSchema(tb.buildFeatureType());
+            ds.setCharset(Charset.forName("GBK"));
+            //设置Writer
+            FeatureWriter<SimpleFeatureType, SimpleFeature> writer = ds.getFeatureWriter(ds.getTypeNames()[0], Transaction.AUTO_COMMIT);
+            MGeometryFactory mgeometryFactory = new MGeometryFactory();
+            while(iterator.hasNext()) {
+                SimpleFeature simpleFeature = iterator.next();
+                MGeometry geometry = (MGeometry) simpleFeature.getDefaultGeometry();
+                if(geometry==null)
+                    continue;
+                String wkts = geometry.toString();
+                if(StringUtils.isEmpty(wkts))
+                    continue;
+                int ll = wkts.indexOf("((");
+                int end = wkts.indexOf("))");
+                if(ll<0)
+                    continue;
+                wkts = wkts.substring(ll+2,end);
+                if(wkts.indexOf("), (")<0){//单线
+                    createFeature(wkts,writer,simpleFeature);
+                }else{//双线
+                    String[] wktArr = wkts.split("\\), \\(");
+                    for(int j=0;j<wktArr.length;j++){
+                        createFeature(wktArr[j],writer,simpleFeature);
+                    }
+                }
+            }
+            writer.write();
+            writer.close();
+            ds.dispose();
+            return true;
+        }catch(Exception e){
+            e.printStackTrace();
+        }finally {
+            if (shpDataStore!=null)
+                shpDataStore.dispose();
+        }
         return false;
     }
 
     @Override
-    public boolean wgs84togcj02(String filePath, String fileName, String projectName) {
+    public Coordinate getCoordinateByPos(@RequestParam String lxbm, @RequestParam int sxxfx, @RequestParam double m) {
+        return RoadUtil.getCoordinateByPos(lxbm,sxxfx,m);
+    }
+
+    @Override
+    public List<CoordinateSequence[]> getCoordinatesBetweenMRange(@RequestParam String lxbm, @RequestParam int sxxfx, @RequestParam double startM, @RequestParam double endM) {
+        return RoadUtil.getCoordinatesBetweenMRange(lxbm,sxxfx,startM,endM);
+    }
+
+    private boolean createFeature(String wkts,FeatureWriter<SimpleFeatureType, SimpleFeature> writer,SimpleFeature simpleFeature){
+        try {
+            GeometryFactory geometryFactory = new GeometryFactory();
+            String[] coordArr = wkts.split(", ");
+            for (int i = 0; i < coordArr.length - 1; i++) {
+                SimpleFeature savefeature = writer.next();
+                savefeature.setAttributes(simpleFeature.getAttributes());
+                Coordinate[] coordinates = new Coordinate[2];
+                String coord = coordArr[i];
+                String[] xy = coord.split(" ");
+                double[] gcj02lonlat = GpsCoordUtil.wgs84togcj02(Double.parseDouble(xy[0]), Double.parseDouble(xy[1]));
+                savefeature.setAttribute("QDZH",Double.parseDouble(xy[2]));
+                coordinates[0] = new Coordinate(gcj02lonlat[0], gcj02lonlat[1]);
+                String coord1 = coordArr[i + 1];
+                String[] xy1 = coord1.split(" ");
+                double[] gcj02lonlat1 = GpsCoordUtil.wgs84togcj02(Double.parseDouble(xy1[0]), Double.parseDouble(xy1[1]));
+                coordinates[1] = new Coordinate(gcj02lonlat1[0], gcj02lonlat1[1]);
+                savefeature.setAttribute("ZDZH",Double.parseDouble(xy1[2]));
+                savefeature.setDefaultGeometry(geometryFactory.createLineString(coordinates));
+
+            }
+            return true;
+        }catch(Exception e){
+            e.printStackTrace();
+        }
         return false;
     }
 
@@ -259,6 +327,20 @@ public class RoadServiceImpl implements RoadService {
             coordinates[i] = new Coordinate(wgsLonlat[0],wgsLonlat[1]);
         }
         return geometryFactory.createLineString(coordinates);
+    }
+
+    private MLineString createMLineString(String wkts){
+        MGeometryFactory mgeometryFactory = new MGeometryFactory();
+        String[] coordArr = wkts.split(", ");
+        MCoordinate[] coordinates = new MCoordinate[coordArr.length];
+        for(int i=0;i<coordArr.length;i++) {
+            String coord = coordArr[i];
+            String[] xy = coord.split(" ");
+            double[] gcj02lonlat = GpsCoordUtil.wgs84togcj02(Double.parseDouble(xy[0]),Double.parseDouble(xy[1]));
+            MCoordinate mCoordinate = new MCoordinate(gcj02lonlat[0],gcj02lonlat[1],Double.parseDouble(xy[2]),Double.parseDouble(xy[2]));
+            coordinates[i] = mCoordinate;
+        }
+        return mgeometryFactory.createMLineString(coordinates);
     }
 
     public MLineString createMLineString(String wkts,double qdzh,double factor){

@@ -1,4 +1,4 @@
-package com.geocommon.vo;
+package com.geocommonapi.vo;
 
 import com.vividsolutions.jts.geom.Envelope;
 

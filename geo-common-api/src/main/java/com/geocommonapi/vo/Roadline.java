@@ -1,4 +1,4 @@
-package com.geocommon.vo;
+package com.geocommonapi.vo;
 
 
 import com.hdsx.measure.jts.MWKTReader;
